@@ -1,0 +1,15 @@
+{
+  "name": "Aliza Textiles - Tissue Sheet",
+  "short_name": "Tissue Sheet",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f4f7f6",
+  "theme_color": "#0288d1",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2921/2921222.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
