@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aliza Textiles - Tissue Sheet App</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0288d1">
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f7f6; padding: 10px; color: #000; margin: 0; }
+        .container { max-width: 1300px; background: white; padding: 18px; border-radius: 12px; margin: 10px auto; border: 2px solid #000; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1 { text-align: center; border-bottom: 3px solid #000; padding-bottom: 10px; margin-top: 0; font-size: 22px; }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; background: white; }
+            .container { width: 100%; border: none; padding: 0; box-shadow: none; margin: 0; }
+            th, td { border: 1px solid #000 !important; font-size: 12px !important; }
+            .grand-total-row td { background-color: #eee !important; color: #000 !important; }
+        }
+
+        /* Install Banner */
+        #installBanner { display: none; background: #0d47a1; color: white; padding: 12px; border-radius: 8px; margin-bottom: 15px; justify-content: space-between; align-items: center; }
+        #installBtn { background: #ffca28; color: #000; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+        /* Bulk Entry Box */
+        .bulk-section { background: #e3f2fd; padding: 14px; border-radius: 8px; border: 2px solid #333; margin-bottom: 18px; }
+        .bulk-row { display: grid; grid-template-columns: 1.5fr 1.2fr 0.7fr 1fr 1fr 0.7fr; gap: 6px; margin-bottom: 8px; align-items: center; }
+        .bulk-header { font-weight: bold; background: #0288d1; color: white; padding: 8px 4px; text-align: center; border-radius: 4px; font-size: 12px; }
+        
+        input, select { padding: 8px; border: 2px solid #000; border-radius: 4px; font-size: 13px; width: 100%; box-sizing: border-box; background: #fff; font-weight: 600; }
+        
+        /* Hide number spinners */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        .row-controls { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .btn-add-row { background: #0288d1; color: white; padding: 10px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .add-all-btn { background: #2e7d32; color: white; padding: 13px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; margin-top: 10px; text-transform: uppercase; }
+
+        /* Action Buttons Stack */
+        .action-stack { display: flex; flex-direction: column; gap: 10px; margin: 18px 0; }
+        .btn-pill-small { align-self: flex-start; background: #0288d1; color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: bold; font-size: 14px; cursor: pointer; }
+        .btn-bar { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; font-size: 15px; color: white; cursor: pointer; text-align: center; }
+        .btn-save-sheet { background: #0277bd; }
+        .btn-load-saved { background: #00897b; }
+        .btn-export-json { background: #37474f; }
+        .btn-print-pdf { background: #0f172a; }
+
+        /* Active Sheet Info */
+        .sheet-status { display: flex; justify-content: space-between; align-items: center; background: #fff3e0; border: 2px solid #ff9800; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; font-weight: bold; flex-wrap: wrap; gap: 8px; }
+
+        /* Table */
+        .table-wrapper { overflow-x: auto; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background-color: #000; color: #fff; padding: 10px; border: 1px solid #fff; text-transform: uppercase; font-size: 12px; }
+        td { padding: 9px; border: 1px solid #000; text-align: center; font-weight: bold; font-size: 13px; }
+        .date-row { background: #333; color: #fff; text-align: left; padding: 10px; font-size: 15px; }
+        .total-highlight { background: #ffff00; font-size: 15px; border: 2px solid #000 !important; }
+        .grand-total-row { background: #000; color: #fff; }
+        .del-row-btn { background: #d32f2f; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+
+        /* Saved Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 999; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; }
+        .modal-box { background: white; width: 100%; max-width: 500px; border-radius: 12px; padding: 20px; border: 2px solid #000; max-height: 80vh; overflow-y: auto; }
+        .saved-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 8px; background: #f9f9f9; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Install PWA Prompt -->
+    <div id="installBanner" class="no-print">
+        <span>📲 Isay Mobile App ki tarah install karein!</span>
+        <button id="installBtn">Install App</button>
+    </div>
+
+    <h1>Aliza Textiles - Tissue Data Sheet</h1>
+
+    <!-- Active Sheet Bar -->
+    <div class="sheet-status no-print">
+        <span id="currentSheetLabel">📄 Current Sheet: Unsaved Working Sheet</span>
+        <button onclick="startNewSheet()" style="background:#d84315; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:bold;">+ New Blank Sheet</button>
+    </div>
+
+    <!-- Dynamic Bulk Entry Box -->
+    <div class="bulk-section no-print">
+        <div style="font-weight: bold; margin-bottom: 8px; color: #0d47a1; font-size: 14px;">📝 Entries yahan fill karein (Rows barhane ke liye neechay button dabayein):</div>
+        
+        <div class="bulk-row">
+            <div class="bulk-header">Design</div>
+            <div class="bulk-header">Work Type</div>
+            <div class="bulk-header">Heads</div>
+            <div class="bulk-header">Stitches</div>
+            <div class="bulk-header">Repeats</div>
+            <div class="bulk-header">Clear</div>
+        </div>
+
+        <div id="inputRowsContainer"></div>
+
+        <div class="row-controls">
+            <button class="btn-add-row" onclick="addRow()">+ Add Row</button>
+            <button class="btn-add-row" style="background:#00897b;" onclick="addMultipleRows(5)">+ Add 5 Rows</button>
+        </div>
+
+        <button class="add-all-btn" onclick="processBulkEntries()">🚀 CALCULATE & ADD TO SHEET</button>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-stack no-print">
+        <button class="btn-pill-small" onclick="addBlankEntry()">+ Add blank entry</button>
+        <button class="btn-bar btn-save-sheet" onclick="saveDateSheet()">Save Date Sheet</button>
+        <button class="btn-bar btn-load-saved" onclick="openSavedModal()">Load Saved</button>
+        <button class="btn-bar btn-export-json" onclick="exportJSON()">Export JSON</button>
+        <button class="btn-bar btn-print-pdf" onclick="window.print()">Execute Print / PDF</button>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Design Name</th>
+                    <th>Work Type</th>
+                    <th>Heads</th>
+                    <th>Stitches</th>
+                    <th>Repeats</th>
+                    <th>Total Rate (Rs.)</th>
+                    <th class="no-print">Action</th>
+                </tr>
+            </thead>
+            <tbody id="sheetBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Saved Modal -->
+<div id="savedModal" class="modal no-print">
+    <div class="modal-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:12px;">
+            <h3 style="margin:0;">📂 Saved Date Sheets</h3>
+            <button onclick="closeSavedModal()" style="background:#000; color:#fff; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">X</button>
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:12px; font-weight:bold;">📥 Import JSON Backup File:</label>
+            <input type="file" accept=".json" onchange="importJSON(event)" style="margin-top:4px; padding:5px;">
+        </div>
+        <div id="savedListContainer"></div>
+    </div>
+</div>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Error:', err));
+    }
+
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('installBanner').style.display = 'flex';
+    });
+
+    document.getElementById('installBtn').addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            document.getElementById('installBanner').style.display = 'none';
+        }
+    });
+
+    let currentSheetName = localStorage.getItem('aliza_current_name') || 'Unsaved Working Sheet';
+    let tissueData = JSON.parse(localStorage.getItem('aliza_active_sheet')) || [];
+    let savedArchive = JSON.parse(localStorage.getItem('aliza_saved_archive')) || {};
+    let rowCount = 0;
+
+    window.onload = function() {
+        // Shuru mein 5 default rows banayenge
+        addMultipleRows(5);
+        updateHeaderLabel();
+        render();
+    };
+
+    function updateHeaderLabel() {
+        document.getElementById('currentSheetLabel').innerText = `📄 Sheet: ${currentSheetName}`;
+    }
+
+    function addRow() {
+        rowCount++;
+        const i = rowCount;
+        const container = document.getElementById('inputRowsContainer');
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'bulk-row';
+        rowDiv.id = `row_wrapper_${i}`;
+        rowDiv.innerHTML = `
+            <input type="text" class="t-input" id="name_${i}" data-rowindex="${i}" data-col="0" placeholder="Design ${i}">
+            <select class="t-input" id="type_${i}" data-rowindex="${i}" data-col="1">
+                <option value="2">Chain-Dori (2)</option>
+                <option value="2.5">Indian-Dori (2.5)</option>
+                <option value="2.6">Fzl (2.6)</option>
+                <option value="0.95">Sada Tilla (0.95)</option>
+                <option value="1.1">Tilla Sequence (1.1)</option>
+            </select>
+            <input type="number" class="t-input" id="head_${i}" data-rowindex="${i}" data-col="2" value="28">
+            <input type="number" class="t-input" id="stitch_${i}" data-rowindex="${i}" data-col="3" placeholder="Stitches">
+            <input type="number" class="t-input" id="repeat_${i}" data-rowindex="${i}" data-col="4" placeholder="Repeats">
+            <button type="button" onclick="removeInputRow(${i})" style="background:#e74c3c; color:#fff; border:none; padding:8px 4px; border-radius:4px; cursor:pointer; font-weight:bold;">X</button>
+        `;
+        container.appendChild(rowDiv);
+        attachKeyboardNav(rowDiv);
+    }
+
+    function addMultipleRows(count) {
+        for(let k=0; k<count; k++) {
+            addRow();
+        }
+    }
+
+    function removeInputRow(i) {
+        const el = document.getElementById(`row_wrapper_${i}`);
+        if(el) el.remove();
+    }
+
+    function attachKeyboardNav(rowDiv) {
+        const inputs = rowDiv.querySelectorAll('.t-input');
+        inputs.forEach(input => {
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    const allRows = Array.from(document.querySelectorAll('#inputRowsContainer > div'));
+                    const currentRowWrapper = this.closest('.bulk-row');
+                    const currentRowIdx = allRows.indexOf(currentRowWrapper);
+                    const col = parseInt(this.getAttribute('data-col'));
+
+                    let targetRowIdx = e.key === 'ArrowDown' ? currentRowIdx + 1 : currentRowIdx - 1;
+                    if (targetRowIdx >= 0 && targetRowIdx < allRows.length) {
+                        const targetInputs = allRows[targetRowIdx].querySelectorAll('.t-input');
+                        if (targetInputs[col]) {
+                            e.preventDefault();
+                            targetInputs[col].focus();
+                            if (targetInputs[col].select) targetInputs[col].select();
+                        }
+                    }
+                }
+            });
+        });
+    }
+
+    function clearRowInputs(i) {
+        document.getElementById(`name_${i}`).value = '';
+        document.getElementById(`stitch_${i}`).value = '';
+        document.getElementById(`repeat_${i}`).value = '';
+        document.getElementById(`head_${i}`).value = '28';
+    }
+
+    function processBulkEntries() {
+        let addedCount = 0;
+        const allRows = document.querySelectorAll('#inputRowsContainer > div');
+
+        allRows.forEach(row => {
+            const i = row.id.replace('row_wrapper_', '');
+            const stitchEl = document.getElementById(`stitch_${i}`);
+            const repeatEl = document.getElementById(`repeat_${i}`);
+            
+            if (stitchEl && repeatEl) {
+                const S = parseFloat(stitchEl.value);
+                const R = parseFloat(repeatEl.value);
+                
+                if (!isNaN(S) && !isNaN(R) && S > 0 && R > 0) {
+                    const name = document.getElementById(`name_${i}`).value || `Design`;
+                    const typeSelect = document.getElementById(`type_${i}`);
+                    const factor = parseFloat(typeSelect.value);
+                    const typeName = typeSelect.options[typeSelect.selectedIndex].text.split(' (')[0];
+                    const H = parseFloat(document.getElementById(`head_${i}`).value) || 28;
+
+                    const finalRate = (S * factor / 1000) * H * R;
+
+                    tissueData.push({
+                        type: 'entry',
+                        name: name,
+                        work: typeName,
+                        head: H,
+                        stitch: S,
+                        repeats: R,
+                        total: finalRate
+                    });
+                    addedCount++;
+                    clearRowInputs(i);
+                }
+            }
+        });
+
+        if (addedCount === 0) {
+            alert("Kam az kam aik row mein Stitches aur Repeats likhein!");
+            return;
+        }
+
+        saveActive();
+        alert(`${addedCount} entries add ho gayin!`);
+    }
+
+    function addBlankEntry() {
+        tissueData.push({
+            type: 'entry',
+            name: '-',
+            work: '-',
+            head: 0,
+            stitch: 0,
+            repeats: 0,
+            total: 0
+        });
+        saveActive();
+    }
+
+    function deleteEntry(index) {
+        tissueData.splice(index, 1);
+        saveActive();
+    }
+
+    function saveDateSheet() {
+        if (tissueData.length === 0) {
+            alert("Sheet khali hai!");
+            return;
+        }
+        const today = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+        const defaultName = currentSheetName !== 'Unsaved Working Sheet' ? currentSheetName : `Sheet_${today}`;
+        const sheetName = prompt("Is sheet ka naam likhein:", defaultName);
+        
+        if (!sheetName) return;
+
+        savedArchive[sheetName] = JSON.parse(JSON.stringify(tissueData));
+        localStorage.setItem('aliza_saved_archive', JSON.stringify(savedArchive));
+        
+        currentSheetName = sheetName;
+        localStorage.setItem('aliza_current_name', currentSheetName);
+        updateHeaderLabel();
+        alert(`✅ "${sheetName}" save ho gayi!`);
+    }
+
+    function startNewSheet() {
+        if (tissueData.length > 0 && !confirm("Nayi khali sheet shuru karni hai?")) return;
+        tissueData = [];
+        currentSheetName = 'Unsaved Working Sheet';
+        localStorage.setItem('aliza_current_name', currentSheetName);
+        saveActive();
+        updateHeaderLabel();
+    }
+
+    function openSavedModal() {
+        const list = document.getElementById('savedListContainer');
+        list.innerHTML = '';
+        const keys = Object.keys(savedArchive);
+
+        if (keys.length === 0) {
+            list.innerHTML = '<p style="text-align:center; color:#666;">Koi saved sheet nahi hai.</p>';
+        } else {
+            keys.forEach(key => {
+                const div = document.createElement('div');
+                div.className = 'saved-item';
+                div.innerHTML = `
+                    <div><strong>${key}</strong><br><small>${savedArchive[key].length} entries</small></div>
+                    <div style="display:flex; gap:6px;">
+                        <button onclick="loadSavedSheet('${key}')" style="background:#00897b; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-weight:bold;">Load</button>
+                        <button onclick="deleteSavedSheet('${key}')" style="background:#d32f2f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">Del</button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+        document.getElementById('savedModal').style.display = 'flex';
+    }
+
+    function closeSavedModal() { document.getElementById('savedModal').style.display = 'none'; }
+
+    function loadSavedSheet(key) {
+        tissueData = JSON.parse(JSON.stringify(savedArchive[key]));
+        currentSheetName = key;
+        localStorage.setItem('aliza_current_name', currentSheetName);
+        saveActive();
+        updateHeaderLabel();
+        closeSavedModal();
+    }
+
+    function deleteSavedSheet(key) {
+        if (confirm(`"${key}" delete karni hai?`)) {
+            delete savedArchive[key];
+            localStorage.setItem('aliza_saved_archive', JSON.stringify(savedArchive));
+            openSavedModal();
+        }
+    }
+
+    function exportJSON() {
+        if (tissueData.length === 0) { alert("Data nahi hai!"); return; }
+        const exportObj = { sheetName: currentSheetName, entries: tissueData };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `${currentSheetName.replace(/\s+/g, '_')}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function importJSON(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                if (parsed.entries) {
+                    tissueData = parsed.entries;
+                    currentSheetName = parsed.sheetName || 'Imported Sheet';
+                    localStorage.setItem('aliza_current_name', currentSheetName);
+                    saveActive();
+                    updateHeaderLabel();
+                    closeSavedModal();
+                    alert("✅ Load ho gayi!");
+                }
+            } catch (err) { alert("Error!"); }
+        };
+        reader.readAsText(file);
+    }
+
+    function saveActive() {
+        localStorage.setItem('aliza_active_sheet', JSON.stringify(tissueData));
+        render();
+    }
+
+    function render() {
+        const body = document.getElementById('sheetBody');
+        body.innerHTML = '';
+        let grandTotal = 0;
+
+        tissueData.forEach((item, index) => {
+            grandTotal += item.total;
+            body.innerHTML += `
+                <tr>
+                    <td>${item.name}</td>
+                    <td>${item.work}</td>
+                    <td>${item.head}</td>
+                    <td>${item.stitch}</td>
+                    <td>${item.repeats}</td>
+                    <td class="total-highlight">${item.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="no-print"><button class="del-row-btn" onclick="deleteEntry(${index})">X</button></td>
+                </tr>
+            `;
+        });
+
+        if (tissueData.length > 0) {
+            body.innerHTML += `
+                <tr class="grand-total-row">
+                    <td colspan="5" style="text-align: right; padding: 12px; font-size: 15px;">GRAND TOTAL (Rs.):</td>
+                    <td style="background: #2e7d32; font-size: 17px;">${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="no-print"></td>
+                </tr>
+            `;
+        }
+    }
+</script>
+
+</body>
+</html>
