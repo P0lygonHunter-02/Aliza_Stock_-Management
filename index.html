@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#0288d1">
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f7f6; padding: 10px; color: #000; margin: 0; }
-        .container { max-width: 1300px; background: white; padding: 18px; border-radius: 12px; margin: 10px auto; border: 2px solid #000; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .container { max-width: 1350px; background: white; padding: 18px; border-radius: 12px; margin: 10px auto; border: 2px solid #000; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         h1 { text-align: center; border-bottom: 3px solid #000; padding-bottom: 10px; margin-top: 0; font-size: 22px; }
 
         @media print {
@@ -25,7 +25,7 @@
 
         /* Bulk Entry Box */
         .bulk-section { background: #e3f2fd; padding: 14px; border-radius: 8px; border: 2px solid #333; margin-bottom: 18px; }
-        .bulk-row { display: grid; grid-template-columns: 1.5fr 1.2fr 0.7fr 1fr 1fr 0.7fr; gap: 6px; margin-bottom: 8px; align-items: center; }
+        .bulk-row { display: grid; grid-template-columns: 1.7fr 1.2fr 0.7fr 1fr 1fr 0.7fr; gap: 6px; margin-bottom: 8px; align-items: center; }
         .bulk-header { font-weight: bold; background: #0288d1; color: white; padding: 8px 4px; text-align: center; border-radius: 4px; font-size: 12px; }
         
         input, select { padding: 8px; border: 2px solid #000; border-radius: 4px; font-size: 13px; width: 100%; box-sizing: border-box; background: #fff; font-weight: 600; }
@@ -45,7 +45,6 @@
         .btn-bar { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: bold; font-size: 15px; color: white; cursor: pointer; text-align: center; }
         .btn-save-sheet { background: #0277bd; }
         .btn-load-saved { background: #00897b; }
-        .btn-export-json { background: #37474f; }
         .btn-print-pdf { background: #0f172a; }
 
         /* Active Sheet Info */
@@ -56,7 +55,6 @@
         table { width: 100%; border-collapse: collapse; }
         th { background-color: #000; color: #fff; padding: 10px; border: 1px solid #fff; text-transform: uppercase; font-size: 12px; }
         td { padding: 9px; border: 1px solid #000; text-align: center; font-weight: bold; font-size: 13px; }
-        .date-row { background: #333; color: #fff; text-align: left; padding: 10px; font-size: 15px; }
         .total-highlight { background: #ffff00; font-size: 15px; border: 2px solid #000 !important; }
         .grand-total-row { background: #000; color: #fff; }
         .del-row-btn { background: #d32f2f; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
@@ -80,16 +78,16 @@
 
     <!-- Active Sheet Bar -->
     <div class="sheet-status no-print">
-        <span id="currentSheetLabel">📄 Current Sheet: Unsaved Working Sheet</span>
+        <span id="currentSheetLabel">📄 Sheet: Unsaved Working Sheet</span>
         <button onclick="startNewSheet()" style="background:#d84315; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:bold;">+ New Blank Sheet</button>
     </div>
 
     <!-- Dynamic Bulk Entry Box -->
     <div class="bulk-section no-print">
-        <div style="font-weight: bold; margin-bottom: 8px; color: #0d47a1; font-size: 14px;">📝 Entries yahan fill karein (Rows barhane ke liye neechay button dabayein):</div>
+        <div style="font-weight: bold; margin-bottom: 8px; color: #0d47a1; font-size: 14px;">📝 Entries yahan fill karein (Up/Down Arrow se rows mein move karein):</div>
         
         <div class="bulk-row">
-            <div class="bulk-header">Design</div>
+            <div class="bulk-header">📅 Day & Date</div>
             <div class="bulk-header">Work Type</div>
             <div class="bulk-header">Heads</div>
             <div class="bulk-header">Stitches</div>
@@ -112,7 +110,6 @@
         <button class="btn-pill-small" onclick="addBlankEntry()">+ Add blank entry</button>
         <button class="btn-bar btn-save-sheet" onclick="saveDateSheet()">Save Date Sheet</button>
         <button class="btn-bar btn-load-saved" onclick="openSavedModal()">Load Saved</button>
-        <button class="btn-bar btn-export-json" onclick="exportJSON()">Export JSON</button>
         <button class="btn-bar btn-print-pdf" onclick="window.print()">Execute Print / PDF</button>
     </div>
 
@@ -121,7 +118,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>Design Name</th>
+                    <th>📅 Day & Date</th>
                     <th>Work Type</th>
                     <th>Heads</th>
                     <th>Stitches</th>
@@ -141,10 +138,6 @@
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #000; padding-bottom:10px; margin-bottom:12px;">
             <h3 style="margin:0;">📂 Saved Date Sheets</h3>
             <button onclick="closeSavedModal()" style="background:#000; color:#fff; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">X</button>
-        </div>
-        <div style="margin-bottom:12px;">
-            <label style="font-size:12px; font-weight:bold;">📥 Import JSON Backup File:</label>
-            <input type="file" accept=".json" onchange="importJSON(event)" style="margin-top:4px; padding:5px;">
         </div>
         <div id="savedListContainer"></div>
     </div>
@@ -176,8 +169,24 @@
     let savedArchive = JSON.parse(localStorage.getItem('aliza_saved_archive')) || {};
     let rowCount = 0;
 
+    function getTodayISO() {
+        const now = new Date();
+        const offset = now.getTimezoneOffset();
+        const local = new Date(now.getTime() - offset * 60 * 1000);
+        return local.toISOString().split('T')[0];
+    }
+
+    function formatDayAndDate(isoDateStr) {
+        if (!isoDateStr) return '-';
+        const parts = isoDateStr.split('-');
+        if (parts.length !== 3) return isoDateStr;
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+        const formattedDate = d.toLocaleDateString('en-GB');
+        return `${dayName}, ${formattedDate}`;
+    }
+
     window.onload = function() {
-        // Shuru mein 5 default rows banayenge
         addMultipleRows(5);
         updateHeaderLabel();
         render();
@@ -195,32 +204,27 @@
         rowDiv.className = 'bulk-row';
         rowDiv.id = `row_wrapper_${i}`;
         rowDiv.innerHTML = `
-            <input type="text" class="t-input" id="name_${i}" data-rowindex="${i}" data-col="0" placeholder="Design ${i}">
-            <select class="t-input" id="type_${i}" data-rowindex="${i}" data-col="1">
+            <input type="date" class="t-input" id="date_${i}" data-col="0" value="${getTodayISO()}">
+            <select class="t-input" id="type_${i}" data-col="1">
                 <option value="2">Chain-Dori (2)</option>
                 <option value="2.5">Indian-Dori (2.5)</option>
                 <option value="2.6">Fzl (2.6)</option>
                 <option value="0.95">Sada Tilla (0.95)</option>
                 <option value="1.1">Tilla Sequence (1.1)</option>
             </select>
-            <input type="number" class="t-input" id="head_${i}" data-rowindex="${i}" data-col="2" value="28">
-            <input type="number" class="t-input" id="stitch_${i}" data-rowindex="${i}" data-col="3" placeholder="Stitches">
-            <input type="number" class="t-input" id="repeat_${i}" data-rowindex="${i}" data-col="4" placeholder="Repeats">
-            <button type="button" onclick="removeInputRow(${i})" style="background:#e74c3c; color:#fff; border:none; padding:8px 4px; border-radius:4px; cursor:pointer; font-weight:bold;">X</button>
+            <input type="number" class="t-input" id="head_${i}" data-col="2" value="28">
+            <input type="number" class="t-input" id="stitch_${i}" data-col="3" placeholder="Stitches">
+            <input type="number" class="t-input" id="repeat_${i}" data-col="4" placeholder="Repeats">
+            <button type="button" onclick="clearRowInputs(${i})" style="background:#e74c3c; color:#fff; border:none; padding:8px 4px; border-radius:4px; cursor:pointer; font-weight:bold;">X</button>
         `;
         container.appendChild(rowDiv);
         attachKeyboardNav(rowDiv);
     }
 
     function addMultipleRows(count) {
-        for(let k=0; k<count; k++) {
+        for (let k = 0; k < count; k++) {
             addRow();
         }
-    }
-
-    function removeInputRow(i) {
-        const el = document.getElementById(`row_wrapper_${i}`);
-        if(el) el.remove();
     }
 
     function attachKeyboardNav(rowDiv) {
@@ -248,7 +252,7 @@
     }
 
     function clearRowInputs(i) {
-        document.getElementById(`name_${i}`).value = '';
+        document.getElementById(`date_${i}`).value = getTodayISO();
         document.getElementById(`stitch_${i}`).value = '';
         document.getElementById(`repeat_${i}`).value = '';
         document.getElementById(`head_${i}`).value = '28';
@@ -268,7 +272,8 @@
                 const R = parseFloat(repeatEl.value);
                 
                 if (!isNaN(S) && !isNaN(R) && S > 0 && R > 0) {
-                    const name = document.getElementById(`name_${i}`).value || `Design`;
+                    const rawDate = document.getElementById(`date_${i}`).value || getTodayISO();
+                    const dayDateLabel = formatDayAndDate(rawDate);
                     const typeSelect = document.getElementById(`type_${i}`);
                     const factor = parseFloat(typeSelect.value);
                     const typeName = typeSelect.options[typeSelect.selectedIndex].text.split(' (')[0];
@@ -278,7 +283,7 @@
 
                     tissueData.push({
                         type: 'entry',
-                        name: name,
+                        dayDate: dayDateLabel,
                         work: typeName,
                         head: H,
                         stitch: S,
@@ -303,7 +308,7 @@
     function addBlankEntry() {
         tissueData.push({
             type: 'entry',
-            name: '-',
+            dayDate: '-',
             work: '-',
             head: 0,
             stitch: 0,
@@ -390,39 +395,6 @@
         }
     }
 
-    function exportJSON() {
-        if (tissueData.length === 0) { alert("Data nahi hai!"); return; }
-        const exportObj = { sheetName: currentSheetName, entries: tissueData };
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj, null, 2));
-        const downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `${currentSheetName.replace(/\s+/g, '_')}.json`);
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-        downloadAnchor.remove();
-    }
-
-    function importJSON(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const parsed = JSON.parse(e.target.result);
-                if (parsed.entries) {
-                    tissueData = parsed.entries;
-                    currentSheetName = parsed.sheetName || 'Imported Sheet';
-                    localStorage.setItem('aliza_current_name', currentSheetName);
-                    saveActive();
-                    updateHeaderLabel();
-                    closeSavedModal();
-                    alert("✅ Load ho gayi!");
-                }
-            } catch (err) { alert("Error!"); }
-        };
-        reader.readAsText(file);
-    }
-
     function saveActive() {
         localStorage.setItem('aliza_active_sheet', JSON.stringify(tissueData));
         render();
@@ -435,9 +407,10 @@
 
         tissueData.forEach((item, index) => {
             grandTotal += item.total;
+            const dateDisplay = item.dayDate || item.name || '-';
             body.innerHTML += `
                 <tr>
-                    <td>${item.name}</td>
+                    <td>${dateDisplay}</td>
                     <td>${item.work}</td>
                     <td>${item.head}</td>
                     <td>${item.stitch}</td>
