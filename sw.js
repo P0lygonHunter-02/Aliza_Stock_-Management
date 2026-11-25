@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aliza-tissue-pwa-v1';
+const CACHE_NAME = 'aliza-tissue-pwa-v2';
 const ASSETS = [
   './',
   './index.html',
